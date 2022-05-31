@@ -1,0 +1,13 @@
+    # Defining the environmental variable using hardcoded values in variable
+
+    MSSQL_ROOT_PASSWORD="5cREz5lh"
+    MSSQL_ACCEPT_EULA="Y"
+    MSSQL_GLP_CONNECTSTRING="Data Source=mssql;Initial Catalog=GLP;User ID=sa;Password=5cREz5lh;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;MultiSubnetFailover=False"
+    MSSQL_CUSTOMERMANAGEMENT_CONNECTSTRING="Data Source=mssql;Initial Catalog=CustomerManagement;User ID=sa;Password=5cREz5lh;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;MultiSubnetFailover=False"
+    MSSQL_GLASSLEWIS_CONNECTSTRING="Data Source=mssql;Initial Catalog=GLASS_LEWIS;User ID=sa;Password=5cREz5lh;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;MultiSubnetFailover=False"
+    CUSTOMER_MANAGEMENT_VERSION="latest"
+    BACKFILL_SERVICE_VERSION="latest"
+    MIGRATION_SERVICE_VERSION="latest"
+    GLRC_FRONTEND_VERSION="latest"
+    ACL_SERVICE_VERSION="latest"
+

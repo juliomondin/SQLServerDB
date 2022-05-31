@@ -1,0 +1,91 @@
+  version: '3.4'
+
+  networks:
+    default:
+      driver: bridge
+  
+  services:
+    proxy:    
+      image: glasslewis.azurecr.io/nginx-integration-test:latest
+      container_name: nginx-proxy
+      ports:
+        - "80:80"
+      restart: always
+
+    mssql:
+      image: glasslewis.azurecr.io/sql-integration-test:latest
+      container_name: mssql      
+      ports:
+        - "1433:1433"
+      environment:
+        ACCEPT_EULA: 'Y'
+        SA_PASSWORD: 5cREz5lh
+    
+    customerRH:
+      image: "dotnetroundhouse/roundhouse:1.3.1"
+      container_name: customerRH
+      depends_on:
+        - mssql
+      volumes:
+        - ./sql/customer-management/migrations:/scripts
+        - ./sql/customer-management/on-db-created:/onDbCreated
+      command: ["-cs", "Data Source=mssql;Initial Catalog=CustomerManagement;User id=sa;Password=5cREz5lh;Connection Timeout=120", 
+              "-f", "/scripts", "-vf", "/scripts/_BuildInfo.xml", "--racd", "/onDbCreated"
+             ]
+      links:
+        - "mssql:database"
+
+    customer:
+      image: glasslewis.azurecr.io/customer-management:latest     
+      container_name: customer
+      ports: 
+        - "59775:80"
+      depends_on:
+        - mssql
+      environment:
+        - ConnectionStrings__CustomerManagement="Data Source=mssql;Initial Catalog=CustomerManagement;User ID=sa;Password=5cREz5lh;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;MultiSubnetFailover=False"
+        - Features__UseBackfill=true
+        - Features__UseDataMigration=false
+        - Features__UseSwagger=true
+        - Endpoints__BackfillService=http://backfill
+        - CORS=http://glrc|http://localhost|http://localhost:6063|http://localhost:59775
+      links:
+      - "mssql:database"
+
+    backfill:
+      image: glasslewis.azurecr.io/backfill-service:latest      
+      container_name: backfill
+      ports:
+        - "5252:80"
+      environment:
+         - ConnectionStrings__GLP="Data Source=mssql;Initial Catalog=GLP;User ID=sa;Password=5cREz5lh;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;MultiSubnetFailover=False"
+         - ConnectionStrings__GLASS_LEWIS="Data Source=mssql;Initial Catalog=GLASS_LEWIS;User ID=sa;Password=5cREz5lh;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;MultiSubnetFailover=False"
+         - GovHub__BaseUrl=http://mmock-govhub:8083
+
+    migration:
+      image: glasslewis.azurecr.io/migration-service:latest
+      container_name: migration 
+      ports: 
+        - "7073:80"
+
+    acl-service:
+      image: glasslewis.azurecr.io/acl-service:latest
+      container_name: acl      
+      ports:
+        - "8383:80"
+  
+      environment:
+        - SERVICE_NAME="ACL.API"
+        - INSTANCE_NAME="ACLAPI"
+        - ConnectionStrings__GLP="Data Source=mssql;Initial Catalog=GLP;User ID=sa;Password=5cREz5lh;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;MultiSubnetFailover=False"
+        - ConnectionStrings__GLASS_LEWIS="Data Source=mssql;Initial Catalog=GLASS_LEWIS;User ID=sa;Password=5cREz5lh;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;MultiSubnetFailover=False"
+        - ASPNETCORE_ENVIRONMENT=Development
+
+    mmock-govhub:
+      image: jordimartin/mmock
+      container_name: mmock-govhub
+      ports:
+        - "8082:8082" #console
+        - "8083:8083" #http
+      volumes:
+        - ./../../tests/CustomerManagement.Integration.Tests/Mock:/config
