@@ -1,0 +1,43 @@
+resources:
+  repositories:
+    - repository: self
+      type: git
+      clean: true
+    - repository: devops-deployment
+      type: git
+      name: devops-deployment
+
+trigger:
+  branches: 
+    include:
+    - master    
+  paths:
+      include:
+      - /nginx/*
+
+variables: 
+  - group: build_docker_image_variables
+  - name: projectName
+    value: setup-end-to-end-tests-nginx
+    
+stages:
+  - stage: BuildNginxDocker
+    displayName: Build Nginx Docker image (for integration tests)
+    jobs:
+      - job: DockerBuildPushWeb        
+        displayName: Create Nginx Docker image for integration tests
+        pool:
+          name: Make
+          demands: 
+          - agent.os -equals Linux
+        steps:
+          - template: taskgroups/docker_build_and_push.yml@devops-deployment
+            parameters:
+              dockerFilePath: ./nginx/Dockerfile
+              containerImageTagA: glasslewis.azurecr.io/nginx-integration-test:$(Build.BuildId)
+              containerImageTagB: glasslewis.azurecr.io/nginx-integration-test:latest
+              nugetFeedUrl: $(nuget_feed_url)
+              nugetFeedPat: $(nuget_feed_pat)
+              dockerRegistry: $(docker_registry)
+              dockerUsername: $(docker_registry_username)
+              dockerPassword: $(docker_registry_password)

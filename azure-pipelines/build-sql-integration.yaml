@@ -1,0 +1,43 @@
+resources:
+  repositories:
+    - repository: self
+      type: git
+      clean: true
+    - repository: devops-deployment
+      type: git
+      name: devops-deployment
+
+trigger:
+  branches: 
+    include:
+    - master
+  paths:
+      include:
+      - /sql/*
+
+variables: 
+  - group: build_docker_image_variables
+  - name: projectName
+    value: setup-end-to-end-tests-sql
+
+stages:
+  - stage: BuildSqlDocker
+    displayName: Build SQL Docker image (for integration tests)
+    jobs:
+      - job: DockerBuildPushWeb        
+        displayName: Create SQL Docker image for integration tests
+        pool:
+          name: Make
+          demands: 
+          - agent.os -equals Linux
+        steps:
+          - template: taskgroups/docker_build_and_push.yml@devops-deployment
+            parameters:
+              dockerFilePath: ./sql/Dockerfile
+              containerImageTagA: glasslewis.azurecr.io/sql-integration-test:$(Build.BuildId)
+              containerImageTagB: glasslewis.azurecr.io/sql-integration-test:latest
+              nugetFeedUrl: $(nuget_feed_url)
+              nugetFeedPat: $(nuget_feed_pat)
+              dockerRegistry: $(docker_registry)
+              dockerUsername: $(docker_registry_username)
+              dockerPassword: $(docker_registry_password)
